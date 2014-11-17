@@ -314,8 +314,10 @@ flush_default_route()
         return 0;
 
     rc = install_default_route(NULL, NULL);
-    if(rc < 0)
-        return rc;
+    if(rc < 0) {
+        perror("flush");
+        /* But continue anyway -- there's not much we can do about it. */
+    }
 
     memset(&selected_nexthop, 0, sizeof(selected_nexthop));
     selected_nexthop_metric = INFINITY;
