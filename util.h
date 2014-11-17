@@ -1,4 +1,7 @@
-#define DO_NTOHS(_d, _s) \
+#define MIN(x, y) ((x) <= (y) ? x : y)
+#define MAX(x, y) ((x) < (y) ? y : x)
+
+#define DO_NTOHS(_d, _s)                        \
     do { short _dd; \
          memcpy(&(_dd), (_s), 2); \
          _d = ntohs(_dd); } while(0)

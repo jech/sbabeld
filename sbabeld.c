@@ -356,21 +356,25 @@ flush_default_route()
 /* We just got an Update for the default route. */
 int
 update_selected_route(struct interface *interface, struct in6_addr *nexthop,
-                      unsigned short interval, unsigned short metric)
+                      unsigned short interval, int metric)
 {
     struct timeval now;
+    int n = find_neighbour(interface, nexthop, -1);
 
-    if(metric == INFINITY)
-        return flush_default_route();
+    if(n < 0)
+        return 0;
+
+    metric += MAX(link_cost, neighbours[n].rxcost);
 
     gettime(&now);
 
-    if(selected_nexthop_metric == INFINITY ||
+    if(selected_nexthop_metric >= INFINITY ||
        interface != selected_interface ||
        memcmp(nexthop, &selected_nexthop, sizeof(selected_nexthop)) != 0) {
         int rc;
-        if(metric >= selected_nexthop_metric + 32 &&
-           timeval_compare(&now, &selected_nexthop_timeout) < 0) {
+        if(metric >= INFINITY ||
+           (metric >= selected_nexthop_metric + 32 &&
+            timeval_compare(&now, &selected_nexthop_timeout) < 0)) {
             /* Our currently selected route is just as good or better. */
             return 0;
         }
@@ -473,7 +477,7 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
                 DO_NTOHS(metric, tlv + 10);
                 update_selected_route(interface,
                                       have_nexthop ? &nexthop : from,
-                                      interval, metric + link_cost);
+                                      interval, metric);
             }
             break;
         case MESSAGE_REQUEST:
