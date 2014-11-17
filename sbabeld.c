@@ -340,7 +340,7 @@ update_selected_route(struct interface *interface, struct in6_addr *nexthop,
     if(memcmp(nexthop, &selected_nexthop, sizeof(selected_nexthop)) != 0) {
         int rc;
         if(metric >= selected_nexthop_metric + 32 &&
-           timeval_minus_msec(&now, &selected_nexthop_timeout) > 0) {
+           timeval_compare(&now, &selected_nexthop_timeout) < 0) {
             /* Our currently selected route is just as good or better. */
             return 0;
         }
