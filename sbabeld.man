@@ -13,11 +13,11 @@ Babel is a loop-avoiding distance-vector routing protocol
 The
 .B sbabeld
 daemon is a very simple implementation of Babel that is only suitable for
-stub networks.  Please do not use
-.BR sbabeld ,
-as the
+stub routers (routers that only route between their attached networks and
+the rest of the Internet).  If you can afford to, you should be using the
+full
 .B babeld
-daemon is more reliable while remaining reasonably small.
+daemon, since it converges faster while remaining reasonably small.
 .SH OPTIONS
 .TP
 .BI \-p " prefix"

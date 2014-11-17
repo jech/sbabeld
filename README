@@ -5,10 +5,16 @@ Babel is a loop-avoiding distance vector protocol that is suitable for
 both wired and wireless networks documented in RFC 6126.  The standard
 implementation of Babel is a Unix daemon called babeld, that fits in a few
 dozen kilobytes and implements a number of extensions to the protocol.
+For more information about Babel and babeld, please see
+
+    http://www.pps.univ-paris-diderot.fr/~jch/software/babel/
 
 The sbabeld daemon is a tiny implementation of Babel that is only suitable
-for stub networks.  Please do not use sbabeld, as the full babeld daemon
-is more reliable while remaining reasonably small.
+for stub routers (routers that only route between their connected networks
+and the rest of the Internet).  It is designed to be small, easy to
+understand, and easy to port.  If you can afford to, you should be running
+the full babeld daemon, as it converges faster while remaining reasonably
+small.
 
 Sbabeld implements the following features of the Babel protocol:
 
@@ -23,7 +29,8 @@ It does not implement the following features of the full babeld implementation:
   * IPv4;
   * learning a full routing table;
   * reannouncing learned routes;
-  * announcing multiple prefixes with automatic redistribution;
+  * keeping fallback routes for faster convergence after a failure;
+  * automatic redistribution;
   * active participation in the loop-avoidance protocol;
   * link quality estimation for lossy and high-latency links;
   * detection of interface status;
