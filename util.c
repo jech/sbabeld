@@ -270,28 +270,6 @@ install_default_route(char *ifname, struct in6_addr *nexthop)
     return 1;
 }
 
-/* Wait for data to be available on fd.  Direction is 1 for output. */
-
-int
-wait_for_fd(int direction, int fd, int msecs)
-{
-    fd_set fds;
-    int rc;
-    struct timeval tv;
-
-    tv.tv_sec = msecs / 1000;
-    tv.tv_usec = (msecs % 1000) * 1000;
-
-    FD_ZERO(&fds);
-    FD_SET(fd, &fds);
-    if(direction)
-        rc = select(fd + 1, NULL, &fds, NULL, &tv);
-    else
-        rc = select(fd + 1, &fds, NULL, NULL, &tv);
-
-    return rc;
-}
-
 /* Create a listening socket. */
 
 int
@@ -419,11 +397,8 @@ babel_send(int s,
         if(errno == EINTR)
             goto again;
         else if(errno == EAGAIN) {
-            int rc2;
-            rc2 = wait_for_fd(1, s, 5);
-            if(rc2 > 0)
-                goto again;
-            errno = EAGAIN;
+            nap(10);
+            rc = sendmsg(s, &msg, 0);
         }
     }
     return rc;
