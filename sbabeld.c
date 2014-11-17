@@ -355,7 +355,9 @@ update_selected_route(struct interface *interface, struct in6_addr *nexthop,
     }
 
     selected_nexthop_metric = metric;
-    timeval_add_msec(&selected_nexthop_timeout, &now, interval * 10);
+    /* Expire this route when we lose 3 updates in a row. */
+    timeval_add_msec(&selected_nexthop_timeout, &now,
+                     3 * interval * 10 + rand() % (interval * 5));
 
     return 1;
 }
