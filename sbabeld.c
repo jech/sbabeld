@@ -609,8 +609,12 @@ main(int argc, char **argv)
                          update_interval * 700 + rand() % 300);
         timeval_min(&tv, &update);
 
-        if(selected_nexthop_metric < INFINITY)
+        if(selected_nexthop_metric < INFINITY) {
+            int n = find_neighbour(selected_interface, &selected_nexthop, -1);
+            assert(n >= 0);
+            timeval_min(&tv, &neighbours[n].timeout);
             timeval_min(&tv, &selected_nexthop_timeout);
+        }
 
         if(timeval_compare(&tv, &now) > 0)
             timeval_minus(&tv, &tv, &now);
@@ -659,10 +663,18 @@ main(int argc, char **argv)
 
         gettime(&now);
 
-        /* Is it time to expire our default route? */
-        if(selected_nexthop_metric < INFINITY &&
-           timeval_compare(&now, &selected_nexthop_timeout) > 0) {
-            flush_default_route();
+        if(selected_nexthop_metric < INFINITY) {
+            int n = find_neighbour(selected_interface, &selected_nexthop, -1);
+            assert(n >= 0);
+
+            if(timeval_compare(&now, &neighbours[n].timeout) > 0) {
+                /* Expire neighbour. */
+                flush_default_route();
+                delete_neighbour(n);
+            } else if(timeval_compare(&now, &selected_nexthop_timeout) > 0) {
+                /* Expire route. */
+                flush_default_route();
+            }
             /* Send a request? */
         }
 
