@@ -266,7 +266,7 @@ send_hello(int sock, struct interface *interface)
         buf[i] = AE_LL; i++;    /* AE */
         buf[i] = 0; i++;
         DO_HTONS(buf + i, cost); i += 2; /* rxcost */
-        DO_HTONS(buf + i, update_interval * 100); i += 2; /* Interval */
+        DO_HTONS(buf + i, hello_interval * 100); i += 2; /* Interval */
         memcpy(buf + i, ((unsigned char *)(&neighbours[j].address)) + 8, 8);
         i += 8;                 /* Address */
     }
