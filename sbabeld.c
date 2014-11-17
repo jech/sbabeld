@@ -625,7 +625,7 @@ main(int argc, char **argv)
         FD_SET(sock, &readfds);
 
         rc = select(sock + 1, &readfds, NULL, NULL, &tv);
-        if(rc < 0) {
+        if(rc < 0 && errno != EINTR) {
             perror("select");
             nap(1000);
             continue;
