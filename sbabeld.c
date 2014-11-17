@@ -448,7 +448,7 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
             CHECK(8);
             if(tlv[2] == AE_WILDCARD ||
                (tlv[2] == AE_LL && length + 2 >= 16 &&
-                address_match(tlv + 8, interface) == 0)) {
+                address_match(tlv + 8, interface))) {
                 unsigned short rxcost;
                 DO_NTOHS(rxcost, tlv + 4);
                 update_neighbour(from, interface, 1, rxcost);
