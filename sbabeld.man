@@ -1,0 +1,44 @@
+.TH SBABELD 8
+.SH NAME
+sbabeld: \- stub-only implementation of the Babel routing protocol
+.SH SYNOPSIS
+.B sbabeld
+.IR option ...
+[
+.B \-\-
+]
+.IR interface ...
+.SH DESCRIPTION
+Babel is a loop-avoiding distance-vector routing protocol
+The
+.B sbabeld
+daemon is a very simple implementation of Babel that is only suitable for
+stub networks.  Please do not use
+.BR sbabeld ,
+as the
+.B babeld
+daemon is more reliable while remaining reasonably small.
+.SH OPTIONS
+.TP
+.BI \-p " prefix"
+Specify the prefix to announce over the Babel protocol.  This must be
+a /64 IPv6 prefix.
+.TP
+.BI \-h " hello-interval"
+Specify the interval in seconds at which scheduled hello packets are
+sent on wireless interfaces.  The default is 4 seconds.
+.TP
+.BI \-u " update-interval"
+Specify the interval in seconds at which scheduled hello packets are
+sent on wireless interfaces.  The default is 20 seconds.
+.TP
+.BI \-c " cost"
+Specify the cost of the attached link.  The default is 256.
+.SH EXAMPLES
+.IP
+sbabeld -p 2001:db8:dead:beef:: eth0 wlan0
+.SH SEE ALSO
+.BR babeld (8)
+.SH AUTHOR
+Juliusz Chroboczek
+

@@ -1,0 +1,57 @@
+A stub-only implementation of Babel
+===================================
+
+Babel is a loop-avoiding distance vector protocol that is suitable for
+both wired and wireless networks documented in RFC 6126.  The standard
+implementation of Babel is a Unix daemon called babeld, that fits in a few
+dozen kilobytes and implements a number of extensions to the protocol.
+
+The sbabeld daemon is a tiny implementation of Babel that is only suitable
+for stub networks.  Please do not use sbabeld, as the full babeld daemon
+is more reliable while remaining reasonably small.
+
+Sbabeld implements the following features of the Babel protocol:
+
+  * bidirectional reachability detection (Hello/IHU);
+  * learning the best IPv6 default route and timing it out;
+  * announcing an IPv6 /64 prefix;
+  * passive participation in the loop-avoidance protocol;
+  * participation in the request/response protocol.
+
+It does not implement the following features of the full babeld implementation:
+
+  * IPv4;
+  * learning a full routing table;
+  * reannouncing learned routes;
+  * announcing multiple prefixes with automatic redistribution;
+  * active participation in the loop-avoidance protocol;
+  * link quality estimation for lossy and high-latency links;
+  * detection of interface status;
+  * history-sensitive route selection;
+  * source-specific routing.
+
+Usage
+-----
+
+In order to just learn any default routes that are being announced:
+
+    sbabeld eth0 wlan0
+
+In order to additionally announce a /64 prefix:
+
+    sbabeld -p 2001:db8:dead:beef:: eth0 wlan0
+
+Porting
+-------
+
+Sbabeld was written for Linux.  It should be easy enough to port to other
+systems that support IPv6 -- see the functions get_local_address and
+install_default_route in util.c.
+
+I have assumed that for link-local addresses, sin6_scope_id is the
+interface index.  That is true on all systems known to me.
+
+Author
+------
+
+Juliusz Chroboczek
