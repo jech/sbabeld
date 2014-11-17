@@ -46,6 +46,9 @@ struct interface {
     unsigned short seqno;       /* the seqno of the last Hello sent */
 };
 
+struct interface interfaces[MAXINTERFACES];
+int numinterfaces = 0;
+
 /* The table of known neighbours. */
 
 struct neighbour {
@@ -54,6 +57,9 @@ struct neighbour {
     unsigned short rxcost;      /* Its advertised rxcost. */
     struct timeval timeout;     /* When to discard this neighbour. */
 };
+
+struct neighbour neighbours[MAXNEIGHBOURS];
+int numneighbours = 0;
 
 /* The interval between periodic updates, in seconds. */
 int update_interval = 20;
@@ -72,12 +78,6 @@ int link_cost = 256;
 
 struct in6_addr babel_group;
 unsigned short babel_port;
-
-struct interface interfaces[MAXINTERFACES];
-int numinterfaces = 0;
-
-struct neighbour neighbours[MAXNEIGHBOURS];
-int numneighbours = 0;
 
 int have_prefix = 0;
 unsigned char myprefix[16];
