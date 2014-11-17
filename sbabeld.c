@@ -86,6 +86,7 @@ unsigned char my_router_id[8];
 
 /* The currently selected next hop. */
 
+struct interface *selected_interface;
 struct in6_addr selected_nexthop;
 unsigned short selected_nexthop_metric = INFINITY;
 struct timeval selected_nexthop_timeout = {0, 0};
@@ -319,6 +320,7 @@ flush_default_route()
         /* But continue anyway -- there's not much we can do about it. */
     }
 
+    selected_interface = NULL;
     memset(&selected_nexthop, 0, sizeof(selected_nexthop));
     selected_nexthop_metric = INFINITY;
     memset(&selected_nexthop_timeout, 0, sizeof(selected_nexthop_timeout));
@@ -337,7 +339,9 @@ update_selected_route(struct interface *interface, struct in6_addr *nexthop,
 
     gettime(&now);
 
-    if(memcmp(nexthop, &selected_nexthop, sizeof(selected_nexthop)) != 0) {
+    if(selected_nexthop_metric == INFINITY ||
+       interface != selected_interface ||
+       memcmp(nexthop, &selected_nexthop, sizeof(selected_nexthop)) != 0) {
         int rc;
         if(metric >= selected_nexthop_metric + 32 &&
            timeval_compare(&now, &selected_nexthop_timeout) < 0) {
@@ -350,7 +354,7 @@ update_selected_route(struct interface *interface, struct in6_addr *nexthop,
             perror("install_default_route");
             return -1;
         }
-
+        selected_interface = interface;
         memcpy(&selected_nexthop, nexthop, sizeof(selected_nexthop));
     }
 
