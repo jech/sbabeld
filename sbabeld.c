@@ -130,8 +130,12 @@ expire_neighbours()
     gettime(&now);
 
     while(i < numneighbours) {
-        if(neighbour_expired(i, &now))
-            delete_neighbour(i);
+        if(neighbour_expired(i, &now) &&
+           /* Don't delete the selected neighbour. */
+           (selected_nexthop_metric == INFINITY ||
+            neighbours[i].interface != selected_interface ||
+            memcmp(&neighbours[i].address, &selected_nexthop, 16) != 0))
+           delete_neighbour(i);
         else
             i++;
     }
