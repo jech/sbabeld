@@ -103,8 +103,43 @@ find_interface(int ifindex)
     return -1;
 }
 
+/* Delete the ith neithbour.  This invalidates all subsequent indices. */
+int
+delete_neighbour(int i)
+{
+    assert(i >= 0 && i < numneighbours);
+    memmove(neighbours + i, neighbours + i + 1, numneighbours - i - 1);
+    numneighbours--;
+    return 1;
+}
+
+/* Return true if the ith neighbour has expired. */
+int
+neighbour_expired(int i, const struct timeval *now)
+{
+    return (timeval_compare(now, &neighbours[i].timeout) > 0);
+}
+
+/* Delete any neighbours that have expired. */
+void
+expire_neighbours()
+{
+    struct timeval now;
+    int i = 0;
+
+    gettime(&now);
+
+    while(i < numneighbours) {
+        if(neighbour_expired(i, &now))
+            delete_neighbour(i);
+        else
+            i++;
+    }
+}
+
 /* Return the index of the given neighbour in the neighbours table.
-   If none found, create a new neighbour if interval >= 0. */
+   If none found, create a new neighbour if interval >= 0.
+   This may expire neighbours, so it potentially invalidates indices. */
 int
 find_neighbour(struct interface *interface, struct in6_addr *address,
                int interval)
@@ -121,6 +156,8 @@ find_neighbour(struct interface *interface, struct in6_addr *address,
         return -1;
 
     if(i >= MAXNEIGHBOURS)
+        expire_neighbours();
+    if(i >= MAXNEIGHBOURS)
         return -1;
 
     neighbours[i].interface = interface;
@@ -129,16 +166,6 @@ find_neighbour(struct interface *interface, struct in6_addr *address,
     memset(&neighbours[i].timeout, 0, sizeof(neighbours[i].timeout));
     numneighbours++;
     return i;
-}
-
-/* Delete the ith neithbour.  This invalidates all subsequent indices. */
-int
-delete_neighbour(int i)
-{
-    assert(i >= 0 && i < numneighbours);
-    memmove(neighbours + i, neighbours + i + 1, numneighbours - i - 1);
-    numneighbours--;
-    return 1;
 }
 
 /* We got a Hello or IHU from a neighbour, update its entry. */
@@ -224,8 +251,7 @@ send_hello(int sock, struct interface *interface)
         if(neighbours[j].interface != interface)
             continue;
         unsigned short cost;
-        if(timeval_compare(&now, &neighbours[j].timeout) > 0)
-            /* Expired neighbour */
+        if(neighbour_expired(j, &now))
             cost = INFINITY;
         else
             cost = link_cost;
@@ -667,7 +693,7 @@ main(int argc, char **argv)
             int n = find_neighbour(selected_interface, &selected_nexthop, -1);
             assert(n >= 0);
 
-            if(timeval_compare(&now, &neighbours[n].timeout) > 0) {
+            if(neighbour_expired(n, &now)) {
                 /* Expire neighbour. */
                 flush_default_route();
                 delete_neighbour(n);
