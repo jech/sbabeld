@@ -37,6 +37,11 @@ It does not implement the following features of the full babeld implementation:
   * history-sensitive route selection;
   * source-specific routing.
 
+The code could be further simplified by removing route selection and
+bidirectional reachability detection -- this would free us from having to
+determine our link-local addresses, and would avoid the need for
+a neighbours table.
+
 Usage
 -----
 
