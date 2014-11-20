@@ -344,7 +344,7 @@ flush_default_route()
     if(selected_nexthop_metric == INFINITY)
         return 0;
 
-    rc = install_default_route(NULL, NULL);
+    rc = install_default_route(0, NULL);
     if(rc < 0) {
         perror("flush");
         /* But continue anyway -- there's not much we can do about it. */
@@ -383,7 +383,7 @@ update_selected_route(struct interface *interface, struct in6_addr *nexthop,
             return 0;
         }
 
-        rc = install_default_route(interface->ifname, nexthop);
+        rc = install_default_route(interface->ifindex, nexthop);
         if(rc < 0) {
             perror("install_default_route");
             return -1;

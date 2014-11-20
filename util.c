@@ -21,6 +21,7 @@ THE SOFTWARE.
 */
 
 #include <stdlib.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -29,6 +30,7 @@ THE SOFTWARE.
 #include <fcntl.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
+#include <linux/rtnetlink.h>
 
 #include "util.h"
 
@@ -245,29 +247,64 @@ random_eui64(unsigned char *eui64)
 /* Install or flush a default route. */
 
 int
-install_default_route(char *ifname, struct in6_addr *nexthop)
+install_default_route(int ifindex, struct in6_addr *nexthop)
 {
-    char nh[INET6_ADDRSTRLEN], buf[100];
-    int rc;
+    static int rtnl = -1, seqid = 0;
+    struct {
+        struct nlmsghdr nh;
+        struct nlmsgerr ne;
+    } reply;
+	struct request {
+        struct nlmsghdr nh;
+        struct rtmsg rtm;
+        struct rtattr rta_oif;
+        uint32_t ifindex;
+        struct rtattr rta_table;
+        uint32_t table;
+        struct rtattr rta_gw;
+        struct in6_addr gw;
+	} request = {
+        {sizeof(request), 0, NLM_F_REQUEST | NLM_F_ACK, 0, 0},
+        {AF_INET6, 0, 0, 0, 0, 0, 0, 0, 0},
+        {sizeof(struct rtattr) + sizeof(uint32_t), RTA_OIF},
+        0,
+        {sizeof(struct rtattr) + sizeof(uint32_t), RTA_TABLE},
+        RT_TABLE_MAIN,
+        {sizeof(struct rtattr) + sizeof(struct in6_addr), RTA_GATEWAY},
+        IN6ADDR_ANY_INIT
+	};
 
-    if(nexthop) {
-        if(inet_ntop(AF_INET6, nexthop, nh, 100) == NULL)
+    if (rtnl < 0) {
+        struct sockaddr_nl nl = {AF_NETLINK, 0, 0, 0};
+        rtnl = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_ROUTE);
+        if (rtnl < 0 || connect(rtnl, (struct sockaddr*)&nl, sizeof(nl)))
             return -1;
 
-        rc = snprintf(buf, 100, "ip -6 route add default via %s dev %s",
-                      nh, ifname);
-        if(rc < 0 || rc >= 100)
-            return -1;
-    } else {
-        rc = snprintf(buf, 100, "ip -6 route del default");
-        if(rc < 0 || rc >= 100)
-            return -1;
+        fcntl(rtnl, F_SETFD, fcntl(rtnl, F_GETFD) | FD_CLOEXEC);
     }
-    rc = system(buf);
-    if(rc != 0)
+
+    request.ifindex = ifindex;
+    request.nh.nlmsg_seq = ++seqid;
+
+    if (nexthop) {
+        request.nh.nlmsg_type = RTM_NEWROUTE;
+        request.nh.nlmsg_flags |= (NLM_F_CREATE | NLM_F_REPLACE);
+        request.rtm.rtm_protocol = RTPROT_STATIC;
+        request.rtm.rtm_scope = RT_SCOPE_UNIVERSE;
+        request.rtm.rtm_type = RTN_UNICAST;
+        request.gw = *nexthop;
+    } else {
+        request.nh.nlmsg_type = RTM_DELROUTE;
+        request.rtm.rtm_scope = RT_SCOPE_NOWHERE;
+        request.nh.nlmsg_len = offsetof(struct request, rta_gw);
+    }
+
+    if (send(rtnl, &request, request.nh.nlmsg_len, 0) < request.nh.nlmsg_len)
         return -1;
 
-    return 1;
+    reply.ne.error = -1;
+    while (recv(rtnl, &reply, sizeof(reply), 0) < 0 && errno == EINTR);
+    return (reply.ne.error) ? -1 : 1;
 }
 
 /* Create a listening socket. */
