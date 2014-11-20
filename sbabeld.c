@@ -252,9 +252,9 @@ send_hello(int sock, struct interface *interface)
 
     gettime(&now);
     for(j = 0; j < numneighbours; j++) {
+        unsigned short cost;
         if(neighbours[j].interface != interface)
             continue;
-        unsigned short cost;
         if(neighbour_expired(j, &now))
             cost = INFINITY;
         else
