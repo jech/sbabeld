@@ -354,20 +354,8 @@ babel_socket(int port)
 int
 babel_recv(int s, void *buf, int buflen, struct sockaddr *sin, int slen)
 {
-    struct iovec iovec;
-    struct msghdr msg;
-    int rc;
-
-    memset(&msg, 0, sizeof(msg));
-    iovec.iov_base = buf;
-    iovec.iov_len = buflen;
-    msg.msg_name = sin;
-    msg.msg_namelen = slen;
-    msg.msg_iov = &iovec;
-    msg.msg_iovlen = 1;
-
-    rc = recvmsg(s, &msg, 0);
-    return rc;
+    socklen_t alen = slen;
+    return recvfrom(s, buf, buflen, 0, sin, &alen);
 }
 
 /* Send a packet with the concatenation of buf1 and buf2. */
@@ -408,8 +396,7 @@ int
 join_group(int sock, int ifindex, struct in6_addr *group)
 {
     struct ipv6_mreq mreq;
-    memset(&mreq, 0, sizeof(mreq));
-    memcpy(&mreq.ipv6mr_multiaddr, group, 16);
+    mreq.ipv6mr_multiaddr = *group;
     mreq.ipv6mr_interface = ifindex;
     return setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP,
                       (char*)&mreq, sizeof(mreq));
@@ -418,32 +405,9 @@ join_group(int sock, int ifindex, struct in6_addr *group)
 int
 catch_signals(void (*handler)(int))
 {
-    struct sigaction sa;
-    sigset_t ss;
-
-    sigemptyset(&ss);
-    sa.sa_handler = handler;
-    sa.sa_mask = ss;
-    sa.sa_flags = 0;
-    sigaction(SIGTERM, &sa, NULL);
-
-    sigemptyset(&ss);
-    sa.sa_handler = handler;
-    sa.sa_mask = ss;
-    sa.sa_flags = 0;
-    sigaction(SIGHUP, &sa, NULL);
-
-    sigemptyset(&ss);
-    sa.sa_handler = handler;
-    sa.sa_mask = ss;
-    sa.sa_flags = 0;
-    sigaction(SIGINT, &sa, NULL);
-
-    sigemptyset(&ss);
-    sa.sa_handler = SIG_IGN;
-    sa.sa_mask = ss;
-    sa.sa_flags = 0;
-    sigaction(SIGPIPE, &sa, NULL);
-
+    signal(SIGTERM, handler);
+    signal(SIGHUP, handler);
+    signal(SIGINT, handler);
+    signal(SIGPIPE, handler);
     return 1;
 }
