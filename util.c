@@ -192,44 +192,24 @@ linklocal(const struct in6_addr *addr)
    Please certify that you're a consenting adult before reading this code. */
 
 int
-get_local_address(const char *ifname, struct in6_addr *addr)
+get_local_address(int ifindex, struct in6_addr *addr)
 {
-    char buf[100];
-    int n, rc;
-    FILE *pip;
-    char *p;
+    struct sockaddr_in6 sin6 = {AF_INET6, 0, 0, IN6ADDR_ANY_INIT, 0};
+    socklen_t alen = sizeof(sin6);
+    int sock = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+    int rc = 1;
 
-    rc = snprintf(buf, 100,
-                  "ip -6 addr show dev %s | "
-                  "sed -n '/^ *inet6 \\([^ ]\\+\\)\\/64 scope link/s//\\1/p'",
-                  ifname);
-    if(rc < 0 || rc >= 100)
-        return -1;
+    inet_pton(AF_INET6, "ff02::1:6", &sin6.sin6_addr);
+    sin6.sin6_scope_id = ifindex;
 
-    pip = popen(buf, "r");
-    if(pip == NULL)
-        return -1;
+    if (sock < 0 || connect(sock, (struct sockaddr*)&sin6, sizeof(sin6)) ||
+            getsockname(sock, (struct sockaddr*)&sin6, &alen))
+        rc = -1;
 
-    n = 0;
-    while(n < 99) {
-        rc = fread(buf + n, 1, 100 - n, pip);
-        if(rc <= 0)
-            break;
-        n += rc;
-    }
-    buf[n] = '\0';
-    pclose(pip);
+    close(sock);
 
-    p = strchr(buf, ' ');
-    if(p)
-        *p = '\0';
-    p = strchr(buf, '\n');
-    if(p)
-        *p = '\0';
-
-    rc = inet_pton(AF_INET6, buf, addr);
-    if(rc != 1)
-        return -1;
+    if (rc == 1)
+        *addr = sin6.sin6_addr;
 
     return 1;
 }

@@ -600,7 +600,7 @@ main(int argc, char **argv)
         memset(&interfaces[i], 0, sizeof(interfaces[i]));
         interfaces[i].ifindex = index;
         interfaces[i].ifname = argv[optind + i];
-        rc = get_local_address(interfaces[i].ifname, &interfaces[i].address);
+        rc = get_local_address(interfaces[i].ifindex, &interfaces[i].address);
         if(rc < 0) {
             perror("get_local_address");
             fprintf(stderr, "Continuing anyway -- "

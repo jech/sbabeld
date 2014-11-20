@@ -20,7 +20,7 @@ void timeval_min(struct timeval *d, const struct timeval *s);
 void nap(int ms);
 int babel_socket(int port);
 int linklocal(const struct in6_addr *addr);
-int get_local_address(const char *ifname, struct in6_addr *addr);
+int get_local_address(int ifindex, struct in6_addr *addr);
 void random_eui64(unsigned char *eui64);
 int install_default_route(int ifindex, struct in6_addr *nexthop);
 int babel_recv(int s, void *buf, int buflen, struct sockaddr *sin, int slen);
