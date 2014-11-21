@@ -188,8 +188,7 @@ linklocal(const struct in6_addr *addr)
     return(memcmp(addr, ll, 8) == 0);
 }
 
-/* Find out the link-local address of an interface.
-   Please certify that you're a consenting adult before reading this code. */
+/* Find out the link-local address of an interface. */
 
 int
 get_local_address(int ifindex, struct in6_addr *addr)
@@ -203,7 +202,7 @@ get_local_address(int ifindex, struct in6_addr *addr)
     sin6.sin6_scope_id = ifindex;
 
     if (sock < 0 || connect(sock, (struct sockaddr*)&sin6, sizeof(sin6)) ||
-            getsockname(sock, (struct sockaddr*)&sin6, &alen))
+        getsockname(sock, (struct sockaddr*)&sin6, &alen))
         rc = -1;
 
     close(sock);
