@@ -314,7 +314,7 @@ int
 increment_myseqno(unsigned short requested_seqno)
 {
     unsigned short delta = (requested_seqno - myseqno) & 0xFFFF;
-    if(delta <= 1)
+    if(delta == 1)
         myseqno = (myseqno + 1) & 0xFFFF;
     return myseqno;
 }
