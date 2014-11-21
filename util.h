@@ -23,7 +23,6 @@ int linklocal(const struct in6_addr *addr);
 int get_local_address(int ifindex, struct in6_addr *addr);
 void random_eui64(unsigned char *eui64);
 int install_default_route(int ifindex, struct in6_addr *nexthop);
-int babel_recv(int s, void *buf, int buflen, struct sockaddr *sin, int slen);
 int babel_send(int s,
                const void *buf1, int buflen1, const void *buf2, int buflen2,
                const struct sockaddr *sin, int slen);

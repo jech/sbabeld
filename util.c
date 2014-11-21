@@ -366,15 +366,6 @@ babel_socket(int port)
     return -1;
 }
 
-/* Receive a packet. */
-
-int
-babel_recv(int s, void *buf, int buflen, struct sockaddr *sin, int slen)
-{
-    socklen_t alen = slen;
-    return recvfrom(s, buf, buflen, 0, sin, &alen);
-}
-
 /* Send a packet with the concatenation of buf1 and buf2. */
 
 int

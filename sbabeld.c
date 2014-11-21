@@ -668,8 +668,9 @@ main(int argc, char **argv)
 
         if(rc > 0) {
             /* Oh good, a packet. */
-            rc = babel_recv(sock, buf, BUF_SIZE,
-                            (struct sockaddr*)&sin6, sizeof(sin6));
+            socklen_t sin6len = sizeof(sin6);
+            rc = recvfrom(sock, buf, BUF_SIZE, 0,
+                          (struct sockaddr*)&sin6, &sin6len);
 
             if(rc < 0 || rc >= BUF_SIZE) {
                 if(rc < 0 && errno != EAGAIN) {
