@@ -636,6 +636,7 @@ main(int argc, char **argv)
         unsigned char buf[BUF_SIZE];
         struct timeval tv, update, zerotv = {0, 0};
         fd_set readfds;
+        int hello_count = 0;
 
         /* Compute when to wake up. */
         gettime(&now);
@@ -719,6 +720,12 @@ main(int argc, char **argv)
             for(i = 0; i < numinterfaces; i++)
                 send_hello(sock, &interfaces[i]);
             last_hello = now;
+            hello_count++;
+            /* Make an expiry pass every ten hellos. */
+            if(hello_count >= 10) {
+                expire_neighbours();
+                hello_count = 0;
+            }
         }
 
         /* Is it time to send an update? */
