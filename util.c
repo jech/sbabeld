@@ -241,6 +241,7 @@ int
 install_default_route(int ifindex, struct in6_addr *nexthop)
 {
     static int rtnl = -1, seqid = 0;
+    int rc;
     struct {
         struct nlmsghdr nh;
         struct nlmsgerr ne;
@@ -290,12 +291,21 @@ install_default_route(int ifindex, struct in6_addr *nexthop)
         request.nh.nlmsg_len = offsetof(struct request, rta_gw);
     }
 
-    if (send(rtnl, &request, request.nh.nlmsg_len, 0) < request.nh.nlmsg_len)
+    rc = send(rtnl, &request, request.nh.nlmsg_len, 0);
+    if(rc < request.nh.nlmsg_len)
         return -1;
 
     reply.ne.error = -1;
-    while (recv(rtnl, &reply, sizeof(reply), 0) < 0 && errno == EINTR);
-    return (reply.ne.error) ? -1 : 1;
+    do {
+        rc = recv(rtnl, &reply, sizeof(reply), 0);
+    } while(rc < 0 && errno == EINTR);
+
+    if(reply.ne.error) {
+        errno = -reply.ne.error;
+        return -1;
+    }
+
+    return 1;
 }
 
 /* Create a listening socket. */
