@@ -195,22 +195,34 @@ get_local_address(int ifindex, struct in6_addr *addr)
 {
     struct sockaddr_in6 sin6 = {AF_INET6, 0, 0, IN6ADDR_ANY_INIT, 0};
     socklen_t alen = sizeof(sin6);
-    int sock = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
-    int rc = 1;
+    int sock, rc, saved_errno;
 
     inet_pton(AF_INET6, "ff02::1:6", &sin6.sin6_addr);
     sin6.sin6_scope_id = ifindex;
 
-    if (sock < 0 || connect(sock, (struct sockaddr*)&sin6, sizeof(sin6)) ||
-        getsockname(sock, (struct sockaddr*)&sin6, &alen))
-        rc = -1;
+    sock = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+    if(sock < 0)
+        return -1;
+
+    rc = connect(sock, (struct sockaddr*)&sin6, sizeof(sin6));
+    if(rc < 0)
+        goto fail;
+
+    rc = getsockname(sock, (struct sockaddr*)&sin6, &alen);
+    if(rc < 0)
+        goto fail;
+
+    *addr = sin6.sin6_addr;
 
     close(sock);
 
-    if (rc == 1)
-        *addr = sin6.sin6_addr;
-
     return 1;
+
+ fail:
+    saved_errno = errno;
+    if(sock >= 0) close(sock);
+    errno = saved_errno;
+    return -1;
 }
 
 /* Draw a random id, in modified EUI-64 format. */
