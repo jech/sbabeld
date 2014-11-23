@@ -143,11 +143,11 @@ expire_neighbours()
 }
 
 /* Return the index of the given neighbour in the neighbours table.
-   If none found, create a new neighbour if interval >= 0.
+   If none found, create a new neighbour if create is true.
    This may expire neighbours, so it potentially invalidates indices. */
 int
 find_neighbour(struct interface *interface, struct in6_addr *address,
-               int interval)
+               int create)
 {
     int i;
     for(i = 0; i < numneighbours; i++) {
@@ -156,8 +156,7 @@ find_neighbour(struct interface *interface, struct in6_addr *address,
             return i;
     }
 
-    if(interval < 0)
-        /* Don't create a new neighbour. */
+    if(!create)
         return -1;
 
     if(i >= MAXNEIGHBOURS)
@@ -178,7 +177,7 @@ int
 update_neighbour(struct in6_addr *from, struct interface *interface,
                  unsigned int ihu, unsigned short interval_or_rxcost)
 {
-    int i = find_neighbour(interface, from, ihu ? -1 : interval_or_rxcost);
+    int i = find_neighbour(interface, from, !ihu);
     if(i < 0)
         return 0;
 
@@ -361,10 +360,10 @@ flush_default_route()
 /* We just got an Update for the default route. */
 int
 update_selected_route(struct interface *interface, struct in6_addr *nexthop,
-                      unsigned short interval, int metric)
+                      short interval, int metric)
 {
     struct timeval now;
-    int n = find_neighbour(interface, nexthop, -1);
+    int n = find_neighbour(interface, nexthop, 0);
 
     if(n < 0)
         return 0;
@@ -646,7 +645,7 @@ main(int argc, char **argv)
         timeval_min(&tv, &update);
 
         if(selected_nexthop_metric < INFINITY) {
-            int n = find_neighbour(selected_interface, &selected_nexthop, -1);
+            int n = find_neighbour(selected_interface, &selected_nexthop, 0);
             assert(n >= 0);
             timeval_min(&tv, &neighbours[n].timeout);
             timeval_min(&tv, &selected_nexthop_timeout);
@@ -701,7 +700,7 @@ main(int argc, char **argv)
         gettime(&now);
 
         if(selected_nexthop_metric < INFINITY) {
-            int n = find_neighbour(selected_interface, &selected_nexthop, -1);
+            int n = find_neighbour(selected_interface, &selected_nexthop, 0);
             assert(n >= 0);
 
             if(neighbour_expired(n, &now)) {
