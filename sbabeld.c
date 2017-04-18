@@ -412,12 +412,17 @@ check_tlv(const unsigned char *tlv, int l)
 
     i = l;
     while(i < length + 2) {
-        int subl = tlv[i + 1];
-         if(i + 2 + subl > length + 2)
+        int subl;
+        if(tlv[i] == 0) {
+            i++;
+            continue;
+        }
+        subl = tlv[i + 1];
+        if(i + 2 + subl > length + 2)
             return -1;
-         if((tlv[i] & 0x80) != 0)
+        if((tlv[i] & 0x80) != 0)
             return 1;
-         i += subl + 2;
+        i += subl + 2;
     }
     return 0;
 }
