@@ -501,9 +501,10 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
             /* There's no such thing as a wildcard multi-hop request. */
             if(tlv[2] == AE_IPV6 && tlv[3] == 64) {
                 unsigned int seqno;
+                CHECK(24);
                 DO_NTOHS(seqno, tlv + 4);
                 if(have_prefix &&
-                   tlv[3] == 6 && memcmp(myprefix, tlv + 8, 8) == 0 &&
+                   tlv[3] == 6 && memcmp(myprefix, tlv + 16, 8) == 0 &&
                    memcmp(tlv + 8, my_router_id, 8) == 0) {
                     increment_myseqno(seqno);
                     send_update(sock, interface, 0);
