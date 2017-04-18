@@ -400,6 +400,28 @@ update_selected_route(struct interface *interface, struct in6_addr *nexthop,
     return 1;
 }
 
+/* Return 1 if found mandatory sub-TLV, -1 on error. */
+int
+check_tlv(const unsigned char *tlv, int l)
+{
+    int length = tlv[1];
+    int i;
+
+    if(length + 2 < l)
+        return -1;
+
+    i = l;
+    while(i < length + 2) {
+        int subl = tlv[i + 1];
+         if(i + 2 + subl > length + 2)
+            return -1;
+         if((tlv[i] & 0x80) != 0)
+            return 1;
+         i += subl + 2;
+    }
+    return 0;
+}
+
 /* The main function -- deal with a packet. */
 int
 handle_packet(int sock, unsigned char *packet, int packetlen,
@@ -440,20 +462,28 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
 
 #define CHECK(l) do { if(length + 2 < l) goto fail; } while(0)
 
+#define CHECK_SUBTLV(l) do {                                    \
+            int rc = check_tlv(tlv, l);                         \
+            if(rc < 0)                                          \
+                goto fail;                                      \
+            else if(rc)                                         \
+                goto skip;                                      \
+        } while(0)
+
         switch(type) {
         case MESSAGE_ACK_REQ:
-            CHECK(8);
+            CHECK_SUBTLV(8);
             send_ack(sock, interface, from, tlv + 4);
             break;
         case MESSAGE_HELLO: {
             unsigned short interval;
-            CHECK(8);
+            CHECK_SUBTLV(8);
             DO_NTOHS(interval, tlv + 6);
             update_neighbour(from, interface, 0, interval);
             break;
         }
         case MESSAGE_IHU:
-            CHECK(8);
+            CHECK_SUBTLV(8);
             if(tlv[2] == AE_WILDCARD ||
                (tlv[2] == AE_LL && length + 2 >= 16 &&
                 address_match(tlv + 8, interface))) {
@@ -463,7 +493,7 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
             }
             break;
         case MESSAGE_NH:
-            CHECK(4);
+            CHECK_SUBTLV(4);
             if(tlv[2] == AE_LL) {
                 unsigned char ll[8] = {0xfe, 0x80, 0, 0, 0, 0, 0, 0};
                 CHECK(12);
@@ -477,6 +507,7 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
             /* We're only interested in IPv6 default routes. */
             if(tlv[2] == AE_IPV6 && tlv[4] == 0) {
                 unsigned short interval, metric;
+                CHECK_SUBTLV(12);
                 DO_NTOHS(interval, tlv + 6);
                 DO_NTOHS(metric, tlv + 10);
                 update_selected_route(interface,
@@ -488,10 +519,11 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
             CHECK(4);
             if(tlv[2] == AE_WILDCARD) {
                 /* Request for a full table dump. */
+                CHECK_SUBTLV(4);
                 send_update(sock, interface, 0);
             } else if(tlv[2] == AE_IPV6 && tlv[3] == 64) {
                 /* Request for a specific /64.  Is it ours? */
-                CHECK(12);
+                CHECK_SUBTLV(12);
                 if(have_prefix && memcmp(myprefix, tlv + 4, 8) == 0)
                     send_update(sock, interface, 0);
             }
@@ -501,7 +533,7 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
             /* There's no such thing as a wildcard multi-hop request. */
             if(tlv[2] == AE_IPV6 && tlv[3] == 64) {
                 unsigned int seqno;
-                CHECK(24);
+                CHECK_SUBTLV(24);
                 DO_NTOHS(seqno, tlv + 4);
                 if(have_prefix &&
                    tlv[3] == 6 && memcmp(myprefix, tlv + 16, 8) == 0 &&
@@ -516,6 +548,7 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
             break;
         }
 
+    skip:
         i += length + 2;
     }
     return 1;
