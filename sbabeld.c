@@ -498,7 +498,6 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
             }
             break;
         case MESSAGE_NH:
-            CHECK_SUBTLV(4);
             if(tlv[2] == AE_LL) {
                 unsigned char ll[8] = {0xfe, 0x80, 0, 0, 0, 0, 0, 0};
                 CHECK(12);
@@ -506,6 +505,7 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
                 memcpy(((unsigned char*)&nexthop) + 8, tlv + 4, 8);
                 have_nexthop = 1;
             }
+            CHECK_SUBTLV(4);
             break;
         case MESSAGE_UPDATE:
             CHECK(12);
