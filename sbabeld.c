@@ -159,11 +159,12 @@ find_neighbour(struct interface *interface, struct in6_addr *address,
     if(!create)
         return -1;
 
-    if(i >= MAXNEIGHBOURS)
+    if(numneighbours >= MAXNEIGHBOURS)
         expire_neighbours();
-    if(i >= MAXNEIGHBOURS)
+    if(numneighbours >= MAXNEIGHBOURS)
         return -1;
 
+    i = numneighbours;
     neighbours[i].interface = interface;
     memcpy(&neighbours[i].address, address, 16);
     neighbours[i].rxcost = INFINITY;
