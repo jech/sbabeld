@@ -482,10 +482,14 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
             send_ack(sock, interface, from, tlv + 4);
             break;
         case MESSAGE_HELLO: {
+            unsigned short flags;
             unsigned short interval;
             CHECK_SUBTLV(8);
+            DO_NTOHS(flags, tlv + 2);
             DO_NTOHS(interval, tlv + 6);
-            update_neighbour(from, interface, 0, interval);
+            /* Ignore unicast Hellos */
+            if((flags & 0x8000) == 0)
+                update_neighbour(from, interface, 0, interval);
             break;
         }
         case MESSAGE_IHU:
