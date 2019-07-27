@@ -92,6 +92,8 @@ struct in6_addr selected_nexthop;
 unsigned short selected_nexthop_metric = INFINITY;
 struct timeval selected_nexthop_timeout = {0, 0};
 
+int flush_default_route(void);
+
 /* Return the index of the given interface in the interface table. */
 int
 find_interface(int ifindex)
@@ -132,14 +134,16 @@ expire_neighbours()
     gettime(&now);
 
     while(i < numneighbours) {
-        if(neighbour_expired(i, &now) &&
-           /* Don't delete the selected neighbour. */
-           (selected_nexthop_metric == INFINITY ||
-            neighbours[i].interface != selected_interface ||
-            memcmp(&neighbours[i].address, &selected_nexthop, 16) != 0))
-           delete_neighbour(i);
-        else
+        if(neighbour_expired(i, &now)) {
+            if(selected_nexthop_metric < INFINITY &&
+               neighbours[i].interface == selected_interface &&
+               memcmp(&neighbours[i].address, &selected_nexthop, 16) == 0) {
+                flush_default_route();
+            }
+            delete_neighbour(i);
+        } else {
             i++;
+        }
     }
 }
 
