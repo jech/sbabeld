@@ -179,27 +179,36 @@ find_neighbour(struct interface *interface, const struct in6_addr *address,
     return i;
 }
 
-/* We got a Hello or IHU from a neighbour, update its entry. */
+/* We got a Hello from a neighbour. */
 int
-update_neighbour(const struct in6_addr *from, struct interface *interface,
-                 unsigned int ihu, unsigned short interval_or_rxcost)
+neighbour_hello(const struct in6_addr *from, struct interface *interface,
+                unsigned short interval)
 {
-    int i = find_neighbour(interface, from, !ihu);
+    struct timeval now;
+    int i = find_neighbour(interface, from, 1);
     if(i < 0)
         return 0;
 
-    if(ihu) {
-        neighbours[i].rxcost = interval_or_rxcost;
-    } else {
-        struct timeval now;
-        int interval = interval_or_rxcost;
-        if(interval > 0) {
-            gettime(&now);
-            /* We'll expire this neighbour if we miss 3 Hellos in a row. */
-            timeval_add_msec(&neighbours[i].timeout, &now,
-                             3 * interval * 10 + rand() % (interval * 5));
-        }
-    }
+    if(interval <= 0)
+        /* Unscheduled Hello, ignore. */
+        return 0;
+
+    gettime(&now);
+    /* We'll expire this neighbour if we miss 3 Hellos in a row. */
+    timeval_add_msec(&neighbours[i].timeout, &now,
+                     3 * interval * 10 + rand() % (interval * 5));
+    return 1;
+}
+
+int
+neighbour_ihu(const struct in6_addr *from, struct interface *interface,
+              unsigned short rxcost)
+{
+    int i = find_neighbour(interface, from, 0);
+    if(i < 0)
+        return 0;
+
+    neighbours[i].rxcost = rxcost;
     return 1;
 }
 
@@ -509,7 +518,7 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
             DO_NTOHS(interval, tlv + 6);
             /* Ignore unicast Hellos */
             if((flags & 0x8000) == 0)
-                update_neighbour(from, interface, 0, interval);
+                neighbour_hello(from, interface, interval);
             break;
         }
         case MESSAGE_IHU:
@@ -518,13 +527,13 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
                 unsigned short rxcost;
                 CHECK_SUBTLV(8);
                 DO_NTOHS(rxcost, tlv + 4);
-                update_neighbour(from, interface, 1, rxcost);
+                neighbour_ihu(from, interface, rxcost);
             } else if(tlv[2] == AE_LL) {
                 CHECK_SUBTLV(16);
                 if(address_match(tlv + 8, interface)) {
                     unsigned short rxcost;
                     DO_NTOHS(rxcost, tlv + 4);
-                    update_neighbour(from, interface, 1, rxcost);
+                    neighbour_ihu(from, interface, rxcost);
                 }
             }
             break;
