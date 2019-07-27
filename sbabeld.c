@@ -216,9 +216,6 @@ send_packet(int sock, int ifindex, struct in6_addr *to,
     header[1] = 2;
     DO_HTONS(header + 2, bodylen);
 
-    /* Additional jitter never harms. */
-    nap(10);
-
     memset(&sin6, 0, sizeof(sin6));
     sin6.sin6_family = AF_INET6;
     memcpy(&sin6.sin6_addr, &babel_group, 16);
@@ -764,7 +761,6 @@ main(int argc, char **argv)
             if(sin6.sin6_family != PF_INET6) {
                 fprintf(stderr, "Received unexpected packet in family %d.\n",
                         sin6.sin6_family);
-                nap(100);
                 continue;
             }
 
@@ -772,7 +768,6 @@ main(int argc, char **argv)
             if(i < 0) {
                 fprintf(stderr, "Received packet on unknown interface %d.\n",
                         sin6.sin6_scope_id);
-                nap(100);
                 continue;
             }
             handle_packet(sock, buf, rc, &interfaces[i], &sin6.sin6_addr);
