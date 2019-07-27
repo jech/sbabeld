@@ -56,7 +56,8 @@ struct neighbour {
     struct interface *interface;
     struct in6_addr address;    /* Link-local address of this neighbour. */
     unsigned short rxcost;      /* Its advertised rxcost. */
-    struct timeval timeout;     /* When to discard this neighbour. */
+    struct timeval timeout;     /* Multicast Hello timeout. */
+    struct timeval utimeout;    /* Unicast Hello timeout. */
 };
 
 struct neighbour neighbours[MAXNEIGHBOURS];
@@ -122,7 +123,9 @@ delete_neighbour(int i)
 int
 neighbour_expired(int i, const struct timeval *now)
 {
-    return (timeval_compare(now, &neighbours[i].timeout) > 0);
+    return
+        timeval_compare(now, &neighbours[i].timeout) > 0 &&
+        timeval_compare(now, &neighbours[i].utimeout) > 0;
 }
 
 /* Delete any neighbours that have expired. */
@@ -175,6 +178,7 @@ find_neighbour(struct interface *interface, const struct in6_addr *address,
     memcpy(&neighbours[i].address, address, 16);
     neighbours[i].rxcost = INFINITY;
     memset(&neighbours[i].timeout, 0, sizeof(neighbours[i].timeout));
+    memset(&neighbours[i].utimeout, 0, sizeof(neighbours[i].utimeout));
     numneighbours++;
     return i;
 }
@@ -182,7 +186,7 @@ find_neighbour(struct interface *interface, const struct in6_addr *address,
 /* We got a Hello from a neighbour. */
 int
 neighbour_hello(const struct in6_addr *from, struct interface *interface,
-                unsigned short interval)
+                unsigned short interval, int unicast)
 {
     struct timeval now;
     int i = find_neighbour(interface, from, 1);
@@ -195,8 +199,8 @@ neighbour_hello(const struct in6_addr *from, struct interface *interface,
 
     gettime(&now);
     /* We'll expire this neighbour if we miss 3 Hellos in a row. */
-    timeval_add_msec(&neighbours[i].timeout, &now,
-                     3 * interval * 10 + rand() % (interval * 5));
+    timeval_add_msec(unicast ? &neighbours[i].utimeout : &neighbours[i].timeout,
+                     &now, 3 * interval * 10 + rand() % (interval * 5));
     return 1;
 }
 
@@ -516,9 +520,7 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
             CHECK_SUBTLV(8);
             DO_NTOHS(flags, tlv + 2);
             DO_NTOHS(interval, tlv + 6);
-            /* Ignore unicast Hellos */
-            if((flags & 0x8000) == 0)
-                neighbour_hello(from, interface, interval);
+            neighbour_hello(from, interface, interval, !!(flags & 0x8000));
             break;
         }
         case MESSAGE_IHU:
@@ -734,7 +736,12 @@ main(int argc, char **argv)
         if(selected_metric < INFINITY) {
             int n = find_neighbour(selected_interface, &selected_nexthop, 0);
             assert(n >= 0);
-            timeval_min(&tv, &neighbours[n].timeout);
+            /* Whichever is later. */
+            if(timeval_compare(&neighbours[n].timeout,
+                               &neighbours[n].utimeout) <= 0)
+                timeval_min(&tv, &neighbours[n].utimeout);
+            else
+                timeval_min(&tv, &neighbours[n].timeout);
             timeval_min(&tv, &selected_timeout);
         }
 
