@@ -188,10 +188,12 @@ update_neighbour(struct in6_addr *from, struct interface *interface,
     } else {
         struct timeval now;
         int interval = interval_or_rxcost;
-        gettime(&now);
-        /* We'll expire this neighbour if we miss 3 Hellos in a row. */
-        timeval_add_msec(&neighbours[i].timeout, &now,
-                         3 * interval * 10 + rand() % (interval * 5));
+        if(interval > 0) {
+            gettime(&now);
+            /* We'll expire this neighbour if we miss 3 Hellos in a row. */
+            timeval_add_msec(&neighbours[i].timeout, &now,
+                             3 * interval * 10 + rand() % (interval * 5));
+        }
     }
     return 1;
 }
