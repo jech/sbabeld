@@ -407,8 +407,9 @@ update_selected_route(struct interface *interface,
        memcmp(nexthop, &selected_nexthop, sizeof(selected_nexthop)) != 0) {
         int rc;
         if(!selected &&
-           metric >= selected_metric - 32 &&
-           timeval_compare(&now, &selected_timeout) < 0) {
+           (metric >= INFINITY ||
+            (metric >= selected_metric - 32 &&
+             timeval_compare(&now, &selected_timeout) < 0))) {
             /* Our currently selected route is just as good or better. */
             return 0;
         }
