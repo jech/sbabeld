@@ -34,6 +34,10 @@ THE SOFTWARE.
 
 #include "util.h"
 
+#ifndef RTPROT_BABEL
+#define RTPROT_BABEL 42
+#endif
+
 /* Like gettimeofday, but returns monotonic time.  If POSIX clocks are not
    available, falls back to gettimeofday but enforces monotonicity. */
 
@@ -281,12 +285,13 @@ install_default_route(int ifindex, const struct in6_addr *nexthop)
     if (nexthop) {
         request.nh.nlmsg_type = RTM_NEWROUTE;
         request.nh.nlmsg_flags |= (NLM_F_CREATE | NLM_F_REPLACE);
-        request.rtm.rtm_protocol = RTPROT_STATIC;
+        request.rtm.rtm_protocol = RTPROT_BABEL;
         request.rtm.rtm_scope = RT_SCOPE_UNIVERSE;
         request.rtm.rtm_type = RTN_UNICAST;
         request.gw = *nexthop;
     } else {
         request.nh.nlmsg_type = RTM_DELROUTE;
+        request.rtm.rtm_protocol = RTPROT_BABEL;
         request.rtm.rtm_scope = RT_SCOPE_NOWHERE;
         request.nh.nlmsg_len = offsetof(struct request, rta_gw);
     }
