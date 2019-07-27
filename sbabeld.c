@@ -386,6 +386,7 @@ update_selected_route(struct interface *interface, struct in6_addr *nexthop,
             return 0;
         }
 
+        flush_default_route();
         rc = install_default_route(interface->ifindex, nexthop);
         if(rc < 0) {
             perror("install_default_route");
