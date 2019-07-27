@@ -109,7 +109,8 @@ int
 delete_neighbour(int i)
 {
     assert(i >= 0 && i < numneighbours);
-    memmove(neighbours + i, neighbours + i + 1, numneighbours - i - 1);
+    memmove(neighbours + i, neighbours + i + 1,
+            (numneighbours - i - 1) * sizeof(struct neighbour));
     numneighbours--;
     return 1;
 }
