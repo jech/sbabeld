@@ -270,6 +270,8 @@ send_hello(int sock, struct interface *interface)
         DO_HTONS(buf + i, hello_interval * 100); i += 2; /* Interval */
         memcpy(buf + i, ((unsigned char *)(&neighbours[j].address)) + 8, 8);
         i += 8;                 /* Address */
+        /* We assume that MAXNEIGHBOURS is small enough so that we don't
+           need to fragment the IHU sequence */
     }
 
     assert((i - 8) % 16 == 0 && i - 8 <= 16 * numneighbours);
@@ -660,7 +662,7 @@ main(int argc, char **argv)
         if(rc < 0) {
             perror("get_local_address");
             fprintf(stderr, "Continuing anyway -- "
-                    "won't perform reachibility detection "
+                    "won't perform reachability detection "
                     "on interface %s.\n", interfaces[i].ifname);
         }
         interfaces[i].seqno = rand() & 0xFFFF;

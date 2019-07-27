@@ -1,6 +1,8 @@
 #define BUF_SIZE 4096
 
 #define MAXINTERFACES 5
+/* This must be chosen so that (48 + 12 + 16 * MAXNEIGHBOURS) is less than
+   the smallest MTU. */
 #define MAXNEIGHBOURS 10
 
 #define MESSAGE_PAD1 0
