@@ -88,9 +88,10 @@ unsigned char my_router_id[8];
 /* The currently selected next hop. */
 
 struct interface *selected_interface;
+struct in6_addr selected_neighbour;
 struct in6_addr selected_nexthop;
-unsigned short selected_nexthop_metric = INFINITY;
-struct timeval selected_nexthop_timeout = {0, 0};
+unsigned short selected_metric = INFINITY;
+struct timeval selected_timeout = {0, 0};
 
 int flush_default_route(void);
 
@@ -135,9 +136,9 @@ expire_neighbours()
 
     while(i < numneighbours) {
         if(neighbour_expired(i, &now)) {
-            if(selected_nexthop_metric < INFINITY &&
+            if(selected_metric < INFINITY &&
                neighbours[i].interface == selected_interface &&
-               memcmp(&neighbours[i].address, &selected_nexthop, 16) == 0) {
+               memcmp(&neighbours[i].address, &selected_neighbour, 16) == 0) {
                 flush_default_route();
             }
             delete_neighbour(i);
@@ -151,7 +152,7 @@ expire_neighbours()
    If none found, create a new neighbour if create is true.
    This may expire neighbours, so it potentially invalidates indices. */
 int
-find_neighbour(struct interface *interface, struct in6_addr *address,
+find_neighbour(struct interface *interface, const struct in6_addr *address,
                int create)
 {
     int i;
@@ -180,7 +181,7 @@ find_neighbour(struct interface *interface, struct in6_addr *address,
 
 /* We got a Hello or IHU from a neighbour, update its entry. */
 int
-update_neighbour(struct in6_addr *from, struct interface *interface,
+update_neighbour(const struct in6_addr *from, struct interface *interface,
                  unsigned int ihu, unsigned short interval_or_rxcost)
 {
     int i = find_neighbour(interface, from, !ihu);
@@ -351,7 +352,7 @@ flush_default_route()
 {
     int rc;
 
-    if(selected_nexthop_metric == INFINITY)
+    if(selected_metric == INFINITY)
         return 0;
 
     rc = install_default_route(0, NULL);
@@ -361,19 +362,23 @@ flush_default_route()
     }
 
     selected_interface = NULL;
+    memset(&selected_neighbour, 0, sizeof(selected_neighbour));
     memset(&selected_nexthop, 0, sizeof(selected_nexthop));
-    selected_nexthop_metric = INFINITY;
-    memset(&selected_nexthop_timeout, 0, sizeof(selected_nexthop_timeout));
+    selected_metric = INFINITY;
+    memset(&selected_timeout, 0, sizeof(selected_timeout));
     return 1;
 }
 
 /* We just got an Update for the default route. */
 int
-update_selected_route(struct interface *interface, struct in6_addr *nexthop,
+update_selected_route(struct interface *interface,
+                      const struct in6_addr *neighbour,
+                      const struct in6_addr *nexthop,
                       short interval, int metric)
 {
     struct timeval now;
-    int n = find_neighbour(interface, nexthop, 0);
+    int selected;
+    int n = find_neighbour(interface, neighbour, 0);
 
     if(n < 0)
         return 0;
@@ -383,13 +388,17 @@ update_selected_route(struct interface *interface, struct in6_addr *nexthop,
 
     gettime(&now);
 
-    if(selected_nexthop_metric >= INFINITY ||
-       interface != selected_interface ||
+    selected =
+        selected_metric < INFINITY &&
+        interface == selected_interface &&
+        memcmp(neighbour, &selected_neighbour, sizeof(selected_neighbour)) == 0;
+
+    if(!selected ||
        memcmp(nexthop, &selected_nexthop, sizeof(selected_nexthop)) != 0) {
         int rc;
-        if(metric >= INFINITY ||
-           (metric >= selected_nexthop_metric + 32 &&
-            timeval_compare(&now, &selected_nexthop_timeout) < 0)) {
+        if(!selected &&
+           metric >= selected_metric - 32 &&
+           timeval_compare(&now, &selected_timeout) < 0) {
             /* Our currently selected route is just as good or better. */
             return 0;
         }
@@ -401,15 +410,16 @@ update_selected_route(struct interface *interface, struct in6_addr *nexthop,
             return -1;
         }
         selected_interface = interface;
+        memcpy(&selected_neighbour, neighbour, sizeof(selected_neighbour));
         memcpy(&selected_nexthop, nexthop, sizeof(selected_nexthop));
     }
 
-    selected_nexthop_metric = metric;
+    selected_metric = metric;
     if(metric >= INFINITY)
         flush_default_route();
     else
         /* Expire this route when we lose 3 updates in a row. */
-        timeval_add_msec(&selected_nexthop_timeout, &now,
+        timeval_add_msec(&selected_timeout, &now,
                          3 * interval * 10 + rand() % (interval * 5));
     return 1;
 }
@@ -546,6 +556,7 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
                 DO_NTOHS(interval, tlv + 6);
                 DO_NTOHS(metric, tlv + 10);
                 update_selected_route(interface,
+                                      from,
                                       have_nexthop ? &nexthop : from,
                                       interval, metric);
             }
@@ -713,11 +724,11 @@ main(int argc, char **argv)
                          update_interval * 700 + rand() % 300);
         timeval_min(&tv, &update);
 
-        if(selected_nexthop_metric < INFINITY) {
+        if(selected_metric < INFINITY) {
             int n = find_neighbour(selected_interface, &selected_nexthop, 0);
             assert(n >= 0);
             timeval_min(&tv, &neighbours[n].timeout);
-            timeval_min(&tv, &selected_nexthop_timeout);
+            timeval_min(&tv, &selected_timeout);
         }
 
         if(timeval_compare(&tv, &now) > 0)
@@ -768,7 +779,7 @@ main(int argc, char **argv)
 
         gettime(&now);
 
-        if(selected_nexthop_metric < INFINITY) {
+        if(selected_metric < INFINITY) {
             int n = find_neighbour(selected_interface, &selected_nexthop, 0);
             assert(n >= 0);
 
@@ -776,7 +787,7 @@ main(int argc, char **argv)
                 /* Expire neighbour. */
                 flush_default_route();
                 delete_neighbour(n);
-            } else if(timeval_compare(&now, &selected_nexthop_timeout) > 0) {
+            } else if(timeval_compare(&now, &selected_timeout) > 0) {
                 /* Expire route. */
                 flush_default_route();
             }

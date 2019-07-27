@@ -238,7 +238,7 @@ random_eui64(unsigned char *eui64)
 /* Install or flush a default route. */
 
 int
-install_default_route(int ifindex, struct in6_addr *nexthop)
+install_default_route(int ifindex, const struct in6_addr *nexthop)
 {
     static int rtnl = -1, seqid = 0;
     int rc;
