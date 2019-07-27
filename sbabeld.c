@@ -488,24 +488,36 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
             break;
         }
         case MESSAGE_IHU:
-            CHECK_SUBTLV(8);
-            if(tlv[2] == AE_WILDCARD ||
-               (tlv[2] == AE_LL && length + 2 >= 16 &&
-                address_match(tlv + 8, interface))) {
+            CHECK(8);
+            if(tlv[2] == AE_WILDCARD) {
                 unsigned short rxcost;
+                CHECK_SUBTLV(8);
                 DO_NTOHS(rxcost, tlv + 4);
                 update_neighbour(from, interface, 1, rxcost);
+            } else if(tlv[2] == AE_LL) {
+                CHECK_SUBTLV(16);
+                if(address_match(tlv + 8, interface)) {
+                    unsigned short rxcost;
+                    DO_NTOHS(rxcost, tlv + 4);
+                    update_neighbour(from, interface, 1, rxcost);
+                }
             }
             break;
         case MESSAGE_NH:
+            CHECK(4);
             if(tlv[2] == AE_LL) {
                 unsigned char ll[8] = {0xfe, 0x80, 0, 0, 0, 0, 0, 0};
                 CHECK(12);
                 memcpy((unsigned char*)&nexthop, ll, 8);
                 memcpy(((unsigned char*)&nexthop) + 8, tlv + 4, 8);
                 have_nexthop = 1;
+                CHECK_SUBTLV(12);
+            } else if(tlv[2] == AE_IPV6) {
+                CHECK(20);
+                memcpy((unsigned char*)&nexthop, tlv + 4, 16);
+                have_nexthop = 1;
+                CHECK_SUBTLV(20);
             }
-            CHECK_SUBTLV(4);
             break;
         case MESSAGE_UPDATE:
             CHECK(12);
