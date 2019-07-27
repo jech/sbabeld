@@ -547,19 +547,20 @@ handle_packet(int sock, unsigned char *packet, int packetlen,
                 CHECK_SUBTLV(20);
             }
             break;
-        case MESSAGE_UPDATE:
+        case MESSAGE_UPDATE: {
+            unsigned short interval, metric;
             CHECK(12);
-            /* We're only interested in IPv6 default routes. */
-            if(tlv[2] == AE_IPV6 && tlv[4] == 0) {
-                unsigned short interval, metric;
+            DO_NTOHS(interval, tlv + 6);
+            DO_NTOHS(metric, tlv + 10);
+            if((tlv[2] == AE_WILDCARD && metric == INFINITY) ||
+               (tlv[2] == AE_IPV6 && tlv[4] == 0)) {
                 CHECK_SUBTLV(12);
-                DO_NTOHS(interval, tlv + 6);
-                DO_NTOHS(metric, tlv + 10);
                 update_selected_route(interface,
                                       from,
                                       have_nexthop ? &nexthop : from,
                                       interval, metric);
             }
+        }
             break;
         case MESSAGE_REQUEST:
             CHECK(4);
