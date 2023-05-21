@@ -29,6 +29,7 @@ THE SOFTWARE.
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/time.h>
+#include <sys/random.h>
 #include <arpa/inet.h>
 #include <linux/rtnetlink.h>
 
@@ -230,13 +231,14 @@ get_local_address(int ifindex, struct in6_addr *addr)
 }
 
 /* Draw a random id, in modified EUI-64 format. */
-void
+int
 random_eui64(unsigned char *eui64)
 {
-    int i;
-    for(i = 0; i < 8; i++)
-        eui64[i] = rand() & 0xFF;
-    eui64[0] &= ~3;
+    ssize_t n = getrandom(eui64, 8, 0);
+    if(n < 8)
+        return -1;
+    eui64[9] &= ~3;
+    return 1;
 }
 
 /* Install or flush a default route. */

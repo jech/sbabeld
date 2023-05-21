@@ -701,7 +701,11 @@ main(int argc, char **argv)
     }
     numinterfaces = argc - optind;
 
-    random_eui64(my_router_id);
+    rc = random_eui64(my_router_id);
+    if(rc < 0) {
+        perror("random_eui64");
+        exit(1);
+    }
     myseqno = rand() & 0xFFFF;
 
     sock = babel_socket(babel_port);
